@@ -1,0 +1,9 @@
+{
+  "slug": "agent-session-demo",
+  "name": "Anna Agent Session Demo",
+  "version": "0.1.0",
+  "tagline": "Explore multi-turn chat, streaming and session recovery.",
+  "description": "A frontend playground for Anna Agent Sessions with raw stream records, tool events, cancellation, image inputs and recovery.",
+  "category": "developer-tools",
+  "pricing_model": "free"
+}

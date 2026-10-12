@@ -1,0 +1,9 @@
+node_modules/
+bundle/
+.anna/
+.anna-app/
+.env
+.env.*
+*.log
+.DS_Store
+credentials.json

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Anna Agent Session Demo</title>
+    <link rel="icon" type="image/svg+xml" href="icon.svg" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="topbar">
+        <div>
+          <h1>Anna Agent Session Demo</h1>
+          <p>Explore multi-turn chat, streaming, tools and recovery. Inspect each request and stream frame in your browser.</p>
+        </div>
+        <div class="topbar__status">
+          <div class="status"><span id="conn-dot" class="dot dot--off"></span><span id="conn-label">Disconnected</span></div>
+          <div class="status"><span>Background requests</span><strong id="background-count">0</strong></div>
+        </div>
+      </header>
+      <p id="connection-error" class="config-warning" role="alert" hidden></p>
+      <nav class="tabs" aria-label="Playground sections">
+        <button class="tab tab--active" type="button" data-tab="session">Session</button>
+        <button class="tab" type="button" data-tab="llm">LLM</button>
+        <button class="tab" type="button" data-tab="records">Call records <span id="record-count" class="pill">0</span></button>
+      </nav>
+      <section id="tab-session" class="tab-panel tab-panel--active">
+        <section class="panel tutorial-intro">
+          <h2>Start with two turns</h2>
+          <ol>
+            <li>Wait for <strong>Connected to Anna</strong>. Keep <strong>No tools</strong> selected and click <strong>Create session</strong>.</li>
+            <li>Run <strong>1. Set context</strong>, then <strong>2. Follow up</strong> in the same session. Watch the answer appear below.</li>
+            <li>Try a style override, cancel a long answer, or refresh the page and restore the saved session.</li>
+          </ol>
+          <p class="hint">For the search experiment, select <strong>All declared tools</strong> and create a new session. This demo declares only <code>web_search</code>.</p>
+        </section>
+        <section class="layout">
+          <section class="panel controls">
+            <div class="panel__head"><h2>Session controls</h2><button id="refresh-runtime" class="btn btn--ghost" type="button">Reconnect</button></div>
+            <fieldset class="session-config">
+              <legend>New session settings</legend>
+              <div class="tool-mode-options">
+                <label class="choice-card"><input type="radio" name="tool-mode" value="none" checked /><span><strong>No tools</strong><small>Start here: text responses and conversation context.</small></span></label>
+                <label class="choice-card"><input type="radio" name="tool-mode" value="all" /><span><strong>All declared tools</strong><small>Use the tools in this app's manifest. Currently: web_search.</small></span></label>
+                <label class="choice-card"><input type="radio" name="tool-mode" value="selected" /><span><strong>Selected tools</strong><small>Allow only the tools checked below. An empty selection disables tools.</small></span></label>
+                <label class="choice-card"><input type="radio" name="tool-mode" value="manual" /><span><strong>Enter tool names</strong><small>Separate names with commas, spaces or newlines. The manifest still limits access.</small></span></label>
+              </div>
+              <div id="selected-tools-panel" class="tool-config-panel" hidden>
+                <div class="actions tool-presets"><button id="select-all-tools" class="mini-btn" type="button">Select all</button><button id="clear-selected-tools" class="mini-btn" type="button">Clear</button></div>
+                <div id="tool-checkbox-list" class="tool-checkbox-list" aria-label="Session tools"></div>
+              </div>
+              <label id="manual-tools-panel" class="field tool-config-panel" hidden><span>Tool names</span><textarea id="manual-tools" class="manual-tools" rows="2" spellcheck="false" placeholder="web_search"></textarea></label>
+              <div class="catalog-status-row"><span id="catalog-status" class="hint">The tool catalog loads after connecting.</span><button id="refresh-catalog" class="mini-btn" type="button" disabled>Refresh catalog</button></div>
+              <div id="tool-policy-warning" class="config-warning" hidden></div>
+              <details class="catalog-details"><summary>Raw tool catalog</summary><pre id="catalog-json" class="json">{}</pre></details>
+              <label class="field"><span>Session system prompt (optional)</span><textarea id="create-system-prompt" rows="3" placeholder="Keep your answers concise and practical.">Keep your answers concise and practical.</textarea><small class="hint">Saved when you create the session and used as the default for later turns.</small></label>
+            </fieldset>
+            <div class="actions">
+              <button id="create-session" class="btn btn--primary" type="button" disabled>Create session</button>
+              <button id="delete-selected" class="btn" type="button" disabled>Delete selected</button>
+              <button id="delete-all" class="btn btn--danger" type="button" disabled>Delete all sessions</button>
+              <button id="stop-session-wait" class="btn btn--warn" type="button" disabled>Move to background</button>
+            </div>
+            <label class="field"><span>Existing or saved app_session_uuid</span><input id="manual-session-id" placeholder="aps_… — restore an existing session" /></label>
+            <div class="actions"><button id="attach-manual" class="btn" type="button" disabled>Restore &amp; refresh</button><button id="save-selected" class="btn" type="button" disabled>Save selected ID</button><button id="clear-saved" class="btn btn--ghost" type="button">Clear saved IDs</button></div>
+            <section class="subpanel"><div class="panel__head"><h2>Available sessions</h2><div class="actions"><span id="session-count" class="pill">0</span><button id="list-sessions" class="mini-btn" type="button" disabled>List sessions</button></div></div><ul id="session-list" class="session-list" aria-label="Available sessions"></ul></section>
+            <section class="subpanel"><div class="panel__head"><h2>Saved session IDs</h2><span id="saved-count" class="pill">0</span></div><ul id="saved-list" class="session-list" aria-label="Saved session IDs"></ul></section>
+          </section>
+          <div class="session-workspace">
+          <section class="panel run-panel">
+            <div class="panel__head"><h2>Run a turn</h2></div>
+            <dl class="kv">
+              <div><dt>Selected ID</dt><dd id="selected-session-id">-</dd></div><div><dt>Source</dt><dd id="selected-session-source">-</dd></div><div><dt>Status</dt><dd id="selected-session-state">-</dd></div><div><dt>Tools</dt><dd id="selected-session-tool-policy">-</dd></div><div><dt>Default prompt</dt><dd id="selected-session-system-prompt">-</dd></div><div><dt>Expires at</dt><dd id="selected-session-expires-at">Unconfirmed</dd></div><div><dt>Lifetime limit</dt><dd id="selected-session-max-lifetime-at">Unconfirmed</dd></div><div><dt>Active call</dt><dd id="active-session-record">-</dd></div>
+            </dl>
+            <div class="actions"><button id="refresh-session" class="btn" type="button" disabled>Refresh session</button><button id="session-history" class="btn" type="button" disabled>Read history</button><button id="run-status" class="btn" type="button" disabled>Check run status</button><button id="read-session-frames" class="btn" type="button" disabled>Read archived frames</button></div>
+            <p class="hint">Restore by ID after a page reload while the session is still valid. If output is missing, check run status before sending the request again. Each archive read fetches up to 500 frames; click again to continue.</p>
+            <label class="field"><span>Model preference</span><input id="session-model" placeholder="Automatic — or enter a model name from Anna" /><small class="hint">A preference for each run. The actual model appears in the response.</small></label>
+            <label class="field"><span>System prompt override for this turn (optional)</span><textarea id="run-system-prompt" rows="3" placeholder="Leave blank to use the session's default prompt."></textarea><small class="hint">Applies to this run only; the session default stays the same.</small></label>
+            <div class="example-prompts" aria-label="Tutorial prompts">
+              <span class="hint">Load a prompt, then click Run selected session:</span>
+              <div class="actions"><button class="mini-btn" type="button" data-example="context">1. Set context</button><button class="mini-btn" type="button" data-example="followup">2. Follow up</button><button class="mini-btn" type="button" data-example="style">3. Style override</button><button class="mini-btn" type="button" data-example="default">4. Default style</button><button class="mini-btn" type="button" data-example="search">5. Search</button><button class="mini-btn" type="button" data-example="long">6. Long answer</button></div>
+            </div>
+            <label class="field"><span>User prompt</span><textarea id="run-content" rows="5">I'm building a reading list app for frontend developers. Remember these details and confirm in one sentence.</textarea><small class="hint">Wait for the turn to finish, then follow up in the same session.</small></label>
+            <details class="attachment-details"><summary>Image attachments (optional)</summary><fieldset class="session-image-controls">
+              <legend>Images for this turn</legend>
+              <label class="field"><span>Select images (up to 6)</span><input id="session-images" type="file" accept="image/png,image/jpeg,image/webp,image/gif,.png,.jpg,.jpeg,.webp,.gif" multiple /><small class="hint">PNG, JPEG, WebP or GIF. Every run includes all images in the list. Select files again after a reload.</small></label>
+              <label class="field field--compact"><span>Image detail</span><select id="session-image-detail"><option value="high">High</option><option value="auto">Automatic</option><option value="low">Low</option></select></label>
+              <ul id="session-image-list" class="session-image-list" aria-label="Images for this turn"></ul>
+              <div class="actions"><button id="upload-session-images" class="btn" type="button" disabled>Upload / re-upload images</button><button id="clear-session-images" class="btn btn--ghost" type="button" disabled>Clear images</button></div>
+              <p id="session-image-status" class="hint" role="status" aria-live="polite">No images selected. This run will use text only.</p><p class="hint">Upload before running. A vision-capable model is required. Upload timing is saved separately under Call records.</p>
+            </fieldset></details>
+            <div class="actions"><button id="run-selected" class="btn btn--primary" type="button" disabled>Run selected session</button><button id="run-manual" class="btn" type="button" disabled>Run entered ID</button><button id="cancel-session-run" class="btn btn--warn" type="button" disabled>Cancel current run</button></div>
+            <p class="hint">Cancellation is best effort. We keep reading the stream to confirm the final result. Moving to the background keeps the run and frame capture active while this page stays open.</p>
+          </section>
+        <section class="panel session-inspector-panel"><div class="panel__head panel__head--wrap"><div><h2>Session responses &amp; diagnostics</h2><p class="hint">Answers stream below. Expand tool calls for their inputs and outputs. Call records contain the full raw and SDK frames.</p></div><button id="copy-session-report" class="btn btn--ghost" type="button" disabled>Copy session summary</button></div><div id="session-summary" class="session-summary"></div><div id="session-records" class="session-records" aria-live="polite"></div></section>
+          </div>
+        </section>
+
+      </section>
+      <section id="tab-llm" class="tab-panel">
+        <section class="panel llm-panel">
+          <div class="panel__head"><div><h2>Single LLM completion</h2><p class="hint">An optional comparison with session runs. Each completion sends its own messages.</p></div><button id="copy-llm-result" class="btn btn--ghost" type="button" disabled>Copy result summary</button></div>
+          <label class="field"><span>System prompt (optional)</span><textarea id="llm-system-prompt" rows="3" placeholder="Keep your answers concise and practical."></textarea></label><label class="field"><span>User prompt</span><textarea id="llm-user-prompt" rows="4">Explain what an async iterator does in one sentence.</textarea></label>
+          <details class="attachment-details"><summary>Image inputs (optional)</summary><fieldset class="session-image-controls">
+            <legend>Images for this call</legend><label class="field"><span>Select images (up to 6)</span><input id="llm-images" type="file" accept="image/png,image/jpeg,image/webp,image/gif,.png,.jpg,.jpeg,.webp,.gif" multiple /><small class="hint">PNG, JPEG, WebP or GIF. Images are read automatically and sent with this call.</small></label><ul id="llm-image-list" class="session-image-list" aria-label="Images for the LLM call"></ul><div class="actions"><button id="clear-llm-images" class="btn btn--ghost" type="button" disabled>Clear images</button></div><p id="llm-image-status" class="hint" role="status" aria-live="polite">No images selected. This call will use text only.</p><p class="hint">A vision-capable model is required. Image bytes are omitted from saved call records.</p>
+          </fieldset></details>
+          <label class="field field--compact"><span>Runtime timeout (seconds, 10–600)</span><input id="llm-timeout-seconds" type="number" min="10" max="600" step="1" value="120" /></label><div class="actions"><button id="run-llm" class="btn btn--primary" type="button" disabled>Call LLM</button><button id="stop-llm-wait" class="btn btn--warn" type="button" disabled>Stop waiting</button></div>
+          <dl class="kv metrics"><div><dt>Active call</dt><dd id="active-llm-record">-</dd></div><div><dt>Call path</dt><dd id="llm-invocation-path">-</dd></div><div><dt>Duration</dt><dd id="llm-duration">-</dd></div></dl>
+          <section id="llm-result-view" class="llm-result" aria-live="polite"><div class="llm-result__header"><h3>Response</h3><span id="llm-result-status" class="llm-result__status" hidden></span></div><p id="llm-result-empty" class="empty">The answer, actual model and token usage appear here after the call finishes.</p><div id="llm-output-text" class="llm-output-text" hidden></div><div id="llm-result-metrics" class="llm-result__metrics" hidden></div></section>
+        </section>
+      </section>
+      <section id="tab-records" class="tab-panel">
+        <section class="panel">
+          <div class="panel__head panel__head--wrap"><div><h2>Call records</h2><p class="hint">Requests, responses, frames and timing are saved locally in IndexedDB. Copy current or Copy all includes full frames; summaries do not.</p></div><div class="actions">
+            <select id="record-category-filter" aria-label="Filter call type"><option value="all">All types</option><option value="session">Session</option><option value="llm">LLM</option><option value="upload">Image upload</option></select><select id="record-status-filter" aria-label="Filter call status"><option value="all">All statuses</option><option value="running">Running</option><option value="waiting_stopped">Waiting stopped</option><option value="succeeded">Succeeded</option><option value="failed">Failed</option><option value="cancelled">Cancelled</option><option value="unknown">Unconfirmed</option><option value="interrupted">Interrupted</option></select><button id="refresh-records" class="btn btn--ghost" type="button">Refresh</button><button id="copy-all-records" class="btn btn--ghost" type="button">Copy all</button><button id="clear-records" class="btn btn--danger" type="button">Clear all</button>
+          </div></div>
+          <div id="clear-records-confirmation" class="config-warning record-clear-confirmation" role="group" aria-labelledby="clear-records-message" hidden><p id="clear-records-message">Clear every call record, including records outside the current filters? This cannot be undone. Platform sessions will remain available.</p><div class="actions"><button id="confirm-clear-records" class="btn btn--danger" type="button">Confirm clear</button><button id="cancel-clear-records" class="btn btn--ghost" type="button">Cancel</button></div></div><p id="record-action-status" class="hint" role="status" aria-live="polite" hidden></p>
+          <div class="records-layout"><ul id="record-list" class="record-list" aria-label="Call records"></ul><section class="record-detail"><div class="panel__head"><h2>Full record</h2><div class="actions"><button id="copy-record" class="btn btn--ghost" type="button" disabled>Copy current</button><button id="delete-record" class="btn btn--danger" type="button" disabled>Delete current</button></div></div><pre id="record-json" class="json record-json">{}</pre></section></div>
+        </section>
+      </section>
+    </main>
+    <script type="module" src="app.js"></script>
+  </body>
+</html>

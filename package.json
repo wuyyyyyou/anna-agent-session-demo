@@ -1,0 +1,25 @@
+{
+  "name": "anna-agent-session-demo",
+  "private": true,
+  "version": "0.1.0",
+  "description": "A frontend playground for Anna Agent Sessions: multi-turn chat, streaming, tools, cancellation and recovery.",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "dev": "anna-app dev --slug agent-session-demo",
+    "test": "node --test test/*.test.mjs",
+    "validate": "anna-app validate --strict",
+    "dev:mock": "anna-app dev --slug agent-session-demo --mock-llm fixtures/tutorial.jsonl"
+  },
+  "devDependencies": {
+    "@anna-ai/cli": "0.1.58"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wuyyyyyou/anna-agent-session-demo.git"
+  }
+}
