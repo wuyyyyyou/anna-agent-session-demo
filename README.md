@@ -92,7 +92,7 @@ Platform registry ∩ app manifest ∩ session allowed_tools ∩ run allowed_too
 
 Omitting `allowed_tools` adds no further restriction; `[]` disables tools at that layer. To experiment with other platform tools, add their names to both `manifest.json` and `src/session-config.js` and rebuild. Web search also requires the platform's Web authorization.
 
-The local CLI's catalog can be permissive. Published-app permissions still come from the manifest and Host checks. Inspect actual `granted_tools` and tool events rather than assuming that a catalog entry grants access.
+The local CLI's catalog and grants can be permissive. The demo explicitly sends its tool whitelist even in **All declared tools** mode, and rejects manual names outside `src/session-config.js`, so a local search session is limited to `web_search` too. Published-app permissions still come from the manifest and Host checks. Inspect actual `granted_tools` and tool events rather than assuming that a catalog entry grants access.
 
 ### 4. Cancel a run
 

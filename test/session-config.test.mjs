@@ -18,17 +18,18 @@ test("parseManualTools accepts whitespace and Chinese or ASCII punctuation", () 
   ]);
 });
 
-test("buildSessionCreateInput uses manifest tools or narrows to selected tools", () => {
+test("buildSessionCreateInput explicitly bounds all and selected modes to the demo's tools", () => {
   assert.deepEqual(buildSessionCreateInput({ mode: TOOL_MODES.ALL }), {
     submode: "auto",
+    quotaCaps: { allowed_tools: ["web_search"] },
   });
   assert.deepEqual(buildSessionCreateInput({
     mode: TOOL_MODES.SELECTED,
-    selectedTools: ["fs_read_file", "fs_read_file"],
+    selectedTools: ["web_search", "web_search"],
   }), {
     submode: "auto",
     quotaCaps: {
-      allowed_tools: ["fs_read_file"],
+      allowed_tools: ["web_search"],
     },
   });
 });
@@ -39,8 +40,20 @@ test("buildSessionCreateInput adds a non-empty session system prompt", () => {
     systemPrompt: "  Keep your answers concise and practical.  ",
   }), {
     submode: "auto",
+    quotaCaps: { allowed_tools: ["web_search"] },
     systemPrompt: "Keep your answers concise and practical.",
   });
+});
+
+test("manual tools cannot expand the demo's declared scope in a permissive dev harness", () => {
+  assert.throws(() => buildSessionCreateInput({
+    mode: TOOL_MODES.MANUAL,
+    manualTools: "web_search, fs_write_file",
+  }), /Tools not declared by this demo: fs_write_file/);
+  assert.deepEqual(buildSessionCreateInput({
+    mode: TOOL_MODES.MANUAL,
+    manualTools: "web_search",
+  }), { submode: "auto", quotaCaps: { allowed_tools: ["web_search"] } });
 });
 
 for (const input of [

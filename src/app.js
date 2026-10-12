@@ -337,6 +337,9 @@ function renderToolCheckboxes(checkedNames = getCheckedToolNames()) {
  */
 function toolPolicyWarnings(mode, requestedTools) {
   const warnings = [];
+  const declaredNames = new Set(PLATFORM_TOOL_OPTIONS.map((tool) => tool.name));
+  const undeclared = requestedTools.filter((name) => !declaredNames.has(name));
+  if (undeclared.length) warnings.push(`Not declared by this demo: ${undeclared.join(", ")}. Update manifest.json and session-config.js before enabling these tools.`);
   const unknown = unknownToolNames(requestedTools, toolCatalog);
   if (unknown.length > 0) warnings.push(`Unknown tools will be ignored: ${unknown.join(", ")}`);
   const catalogByName = catalogToolsByName();

@@ -35,14 +35,22 @@ function normalizedPrompt(value) {
 
 export function buildSessionCreateInput({ mode, selectedTools, manualTools, systemPrompt }) {
   const normalizedSystemPrompt = normalizedPrompt(systemPrompt);
+  const declaredTools = PLATFORM_TOOL_OPTIONS.map((tool) => tool.name);
   if (mode === TOOL_MODES.ALL) {
     return {
       submode: "auto",
+      // The local CLI can grant more tools than the app manifest. Bound the
+      // demo explicitly so "all" means this demo's declared tools in dev too.
+      quotaCaps: { allowed_tools: declaredTools },
       ...(normalizedSystemPrompt ? { systemPrompt: normalizedSystemPrompt } : {}),
     };
   }
 
   const allowedTools = selectedToolsForMode({ mode, selectedTools, manualTools });
+  const unsupported = allowedTools.filter((name) => !declaredTools.includes(name));
+  if (unsupported.length) {
+    throw new Error(`Tools not declared by this demo: ${unsupported.join(", ")}. Add tools to manifest.json and session-config.js before enabling them.`);
+  }
 
   return {
     submode: "auto",
